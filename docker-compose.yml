@@ -1,0 +1,35 @@
+
+
+    services:
+      db:
+        image: postgres:15
+        environment:
+          POSTGRES_DB: melkjo_db
+          POSTGRES_USER: melkjo_user
+          POSTGRES_PASSWORD: melkjo_pass
+        volumes:
+          - postgres_data:/var/lib/postgresql/data
+        ports:
+          - "5432:5432" 
+
+      backend:
+        build: ./backend
+        volumes:
+          - ./backend:/app 
+        ports:
+          - "8000:8000" 
+        depends_on:
+          - db 
+        environment:
+          DATABASE_URL: postgres://melkjo_user:melkjo_pass@db:5432/melkjo_db
+
+      frontend:
+        build: ./frontend
+        volumes:
+          - ./frontend:/app 
+          - /app/node_modules 
+        ports:
+          - "5173:5173" 
+
+    volumes:
+      postgres_data: 
