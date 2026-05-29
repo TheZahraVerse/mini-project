@@ -12,7 +12,6 @@ const api = axios.create({
 export const listingApi = {
   getAll: () => api.get('/listings/'),
   getById: (id) => api.get(`/listings/${id}/`),
-  updateStatus: (id, status) => api.patch(`/listings/${id}/`, { status }),
 }
 
 export default api

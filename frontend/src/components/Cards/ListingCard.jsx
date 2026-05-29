@@ -1,49 +1,128 @@
-import React from 'react'
+// frontend/src/components/listings/ListingCard.jsx
+import React from "react"
+import Label from "../Label"
+import Icon from "../Icon"
 
-export default function ListingCard({listing}) {
-  const getStatusBadge = (status) => {
-    const statusConfig = {
-      reviewed: { color: 'bg-yellow-100 text-yellow-800', label: 'بررسی شده' },
-      contacted: { color: 'bg-blue-100 text-blue-800', label: 'تماس گرفته شده' },
-      converted: { color: 'bg-green-100 text-green-800', label: 'تبدیل شده' },
-      rejected: { color: 'bg-red-100 text-red-800', label: 'رد شده' },
+
+export default function ListingCard({ listing, onViewDetails }) {
+  const property = listing.property
+  
+  // Get status label config
+  const getStatusConfig = (status) => {
+    const statusMap = {
+      reviewed: { text: 'بررسی شده', bgColor: 'bg-yellow-100', textColor: 'text-yellow-800' },
+      contacted: { text: 'تماس گرفته شده', bgColor: 'bg-blue-100', textColor: 'text-blue-800' },
+      converted: { text: 'تبدیل شده', bgColor: 'bg-green-100', textColor: 'text-green-800' },
+      rejected: { text: 'رد شده', bgColor: 'bg-red-100', textColor: 'text-red-800' },
     }
-    const config = statusConfig[status] || statusConfig.reviewed
-    return <span className={`px-2 py-1 rounded-full text-xs ${config.color}`}>{config.label}</span>
+    return statusMap[status] || statusMap.reviewed
   }
 
-  const getScoreColor = (score) => {
-    if (score >= 80) return 'bg-emerald-500 text-white'     // great
-    if (score >= 60) return 'bg-emerald-400 text-white'     // so good
-    if (score >= 40) return 'bg-yellow-500 text-white'      // good
-    if (score >= 20) return 'bg-orange-500 text-white'      // bad
-    return 'bg-red-500 text-white'                           // so bad
+  // Get score label config
+  const getScoreConfig = (score) => {
+    if (score >= 80) return { bgColor: 'bg-emerald-500', textColor: 'text-white' }
+    if (score >= 60) return { bgColor: 'bg-emerald-400', textColor: 'text-white' }
+    if (score >= 40) return { bgColor: 'bg-yellow-500', textColor: 'text-white' }
+    if (score >= 20) return { bgColor: 'bg-orange-500', textColor: 'text-white' }
+    return { bgColor: 'bg-red-500', textColor: 'text-white' }
+  }
+
+  const statusConfig = getStatusConfig(listing.status)
+  const scoreConfig = getScoreConfig(listing.score)
+  const formattedDate = new Date(listing.created_at).toLocaleDateString('fa-IR')
+  const formattedTime = new Date(listing.created_at).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' })
+  
+ // Source icon and link
+  const getSourceInfo = (source) => {
+    if (source === 'divar') return { 
+      name: 'دیوار', 
+      icon: <Icon src={"/src/assets/divar.jpg"} />, 
+      link: listing.source_url,
+      hasLink: true
+    }
+    if (source === 'sheypoor') return { 
+      name: 'شیپور', 
+      icon: <Icon src={"/src/assets/sheypoor.png"} />, 
+      link: listing.source_url,
+      hasLink: true
+    }
+    return { 
+      name: 'داخلی', 
+      icon: <Icon src={"/src/assets/internal.png"} />, 
+      link: null,
+      hasLink: false
+    }
+  }
+  
+  const sourceInfo = getSourceInfo(listing.source)
+
+  // Handle icon click - open source link
+  const handleIconClick = () => {
+    if (sourceInfo.hasLink && sourceInfo.link) {
+      window.open(sourceInfo.link, '_blank', 'noopener,noreferrer')
+    }
   }
 
   return (
-    <div className="border rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
-      <div className="flex justify-between items-start mb-3">
-        <div className={`text-2xl font-bold px-3 py-1 rounded-full ${getScoreColor(listing.score)}`}>
-          {listing.score}
+    <div className="rounded-xl p-3 shadow-sm hover:shadow-xl transition-all duration-300 bg-white hover:-translate-y-1">
+      
+      {/* Top row: Right side (Icon + Title) - Left side (Score Label) */}
+      <div className="flex justify-between items-center mb-4">
+        {/* Right side: Icon + Title - Icon is clickable */}
+        <div className="flex items-center gap-2">
+          {/* Clickable icon wrapper */}
+          <div 
+            onClick={handleIconClick}
+            className={sourceInfo.hasLink ? "cursor-pointer hover:opacity-80 transition-opacity" : "cursor-default"}
+            title={sourceInfo.hasLink ? `مشاهده در ${sourceInfo.name}` : `منبع ${sourceInfo.name}`}
+          >
+            {sourceInfo.icon}
+          </div>
+          <h3 className="text-lg font-bold text-gray-800">
+            {property.title}
+          </h3>
         </div>
-        {getStatusBadge(listing.status)}
+        
+        {/* Left side: Score Label */}
+        <Label 
+          text={listing.score.toString()} 
+          bgColor={scoreConfig.bgColor} 
+          textColor={scoreConfig.textColor}
+        />
       </div>
       
-      <h3 className="text-lg font-bold mb-1">{listing.title}</h3>
-      <p className="text-gray-600 text-sm mb-2">{listing.area}</p>
-      
-      <div className="mt-2 pt-2 border-t">
-        <p className="text-lg font-bold text-blue-600">
-          {listing.price?.toLocaleString()} تومان
-        </p>
+      {/* Middle row: Right side (Location & Price vertically) - Left side (Status Label) */}
+      <div className="flex justify-between items-start mb-4">
+        {/* Right side: Location and Price as subtitle (vertical) */}
+        <div className="space-y-1 text-sm text-gray-600">
+          <div>📍 {property?.address || listing.area}</div>
+          <div>💰 {property?.price?.toLocaleString() || listing.price?.toLocaleString()} تومان</div>
+        </div>
+        
+        {/* Left side: Status Label */}
+        <Label 
+          text={statusConfig.text} 
+          bgColor={statusConfig.bgColor} 
+          textColor={statusConfig.textColor}
+        />
       </div>
       
-      <div className="mt-4 text-left">
-        <button className="text-blue-500 text-sm hover:text-blue-900 cursor-pointer transition-colors">
-          جزئیات بیشتر ←
+      {/* Bottom row: Right side (Details button) - Left side (Date and Time) */}
+      <div className="flex justify-between items-center pt-3">
+        {/* Right side: Details button */}
+        <button 
+          onClick={() => onViewDetails(listing)}
+          className="text-blue-500 text-l hover:text-blue-700 cursor-pointer"
+        >
+          جزئیات بیشتر
         </button>
+        
+        {/* Left side: Date and Time */}
+        <div className="text-xs text-gray-400">
+           {formattedTime} - {formattedDate} 
+        </div>
       </div>
+      
     </div>
   )
 }
-
