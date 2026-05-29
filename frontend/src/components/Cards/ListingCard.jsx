@@ -1,65 +1,25 @@
 // frontend/src/components/listings/ListingCard.jsx
 import React from "react"
-import Label from "../Label"
-import Icon from "../Icon"
+import Label from "../common/Label"
+import Icon from "../common/Icon"
+import { getListingStatus, getScoreConfig, getSourceConfig } from "../../constants/statusConfig"
 
 
 export default function ListingCard({ listing, onViewDetails }) {
+  // define constants
   const property = listing.property
   
-  // Get status label config
-  const getStatusConfig = (status) => {
-    const statusMap = {
-      reviewed: { text: 'بررسی شده', bgColor: 'bg-yellow-100', textColor: 'text-yellow-800' },
-      contacted: { text: 'تماس گرفته شده', bgColor: 'bg-blue-100', textColor: 'text-blue-800' },
-      converted: { text: 'تبدیل شده', bgColor: 'bg-green-100', textColor: 'text-green-800' },
-      rejected: { text: 'رد شده', bgColor: 'bg-red-100', textColor: 'text-red-800' },
-    }
-    return statusMap[status] || statusMap.reviewed
-  }
-
-  // Get score label config
-  const getScoreConfig = (score) => {
-    if (score >= 80) return { bgColor: 'bg-emerald-500', textColor: 'text-white' }
-    if (score >= 60) return { bgColor: 'bg-emerald-400', textColor: 'text-white' }
-    if (score >= 40) return { bgColor: 'bg-yellow-500', textColor: 'text-white' }
-    if (score >= 20) return { bgColor: 'bg-orange-500', textColor: 'text-white' }
-    return { bgColor: 'bg-red-500', textColor: 'text-white' }
-  }
-
-  const statusConfig = getStatusConfig(listing.status)
+  const statusConfig = getListingStatus(listing.status)
   const scoreConfig = getScoreConfig(listing.score)
+  const sourceConfig = getSourceConfig(listing.source)
+
   const formattedDate = new Date(listing.created_at).toLocaleDateString('fa-IR')
   const formattedTime = new Date(listing.created_at).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' })
-  
- // Source icon and link
-  const getSourceInfo = (source) => {
-    if (source === 'divar') return { 
-      name: 'دیوار', 
-      icon: <Icon src={"/src/assets/divar.jpg"} />, 
-      link: listing.source_url,
-      hasLink: true
-    }
-    if (source === 'sheypoor') return { 
-      name: 'شیپور', 
-      icon: <Icon src={"/src/assets/sheypoor.png"} />, 
-      link: listing.source_url,
-      hasLink: true
-    }
-    return { 
-      name: 'داخلی', 
-      icon: <Icon src={"/src/assets/internal.png"} />, 
-      link: null,
-      hasLink: false
-    }
-  }
-  
-  const sourceInfo = getSourceInfo(listing.source)
 
-  // Handle icon click - open source link
+  // Icon onclick for linking
   const handleIconClick = () => {
-    if (sourceInfo.hasLink && sourceInfo.link) {
-      window.open(sourceInfo.link, '_blank', 'noopener,noreferrer')
+    if (sourceConfig.hasLink && listing.source_url) {
+      window.open(listing.source_url, '_blank', 'noopener,noreferrer')
     }
   }
 
@@ -73,10 +33,10 @@ export default function ListingCard({ listing, onViewDetails }) {
           {/* Clickable icon wrapper */}
           <div 
             onClick={handleIconClick}
-            className={sourceInfo.hasLink ? "cursor-pointer hover:opacity-80 transition-opacity" : "cursor-default"}
-            title={sourceInfo.hasLink ? `مشاهده در ${sourceInfo.name}` : `منبع ${sourceInfo.name}`}
+            className={sourceConfig.hasLink ? "cursor-pointer hover:opacity-80 transition-opacity" : "cursor-default"}
+            title={sourceConfig.hasLink ? `مشاهده در ${sourceConfig.name}` : `منبع ${sourceConfig.name}`}
           >
-            {sourceInfo.icon}
+            {<Icon src={`/src/assets/${sourceConfig.iconName}`} alt={`آیکون ${sourceConfig.name}`} />}
           </div>
           <h3 className="text-lg font-bold text-gray-800">
             {property.title}
