@@ -2,8 +2,10 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-COPY package*.json ./
+# Use Liara mirror for npm
 RUN npm config set registry https://package-mirror.liara.ir/repository/npm/
+
+COPY package*.json ./
 RUN npm install
 
 COPY . .
