@@ -29,7 +29,7 @@
           - ./frontend:/app 
           - /app/node_modules 
         ports:
-          - "5173:5173" 
+          - "8080:5173" 
 
     volumes:
       postgres_data: 
