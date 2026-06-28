@@ -49,7 +49,20 @@ export const listingApi = {
 
     return api.get(url);
   },
+  //Get a single listing
   getById: (id) => api.get(`/listings/${id}/`),
+
+  // Create a new listing
+  create: (data) => api.post("/listings/", data),
+
+  // Update and edit a single listing
+  update: (id, data) => api.patch(`/listings/${id}/`, data),
+
+  // delete a single listing
+  delete: (id) => api.delete(`/listings/${id}/`),
+
+  // delete a group of listings
+  bulkDelete: (ids) => api.delete("/listings/bulk_delete/", { data: { ids } }),
 };
 
 export default api;

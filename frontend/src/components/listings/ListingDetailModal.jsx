@@ -1,11 +1,11 @@
 import React from "react";
-import Modal from "./common/Modal";
-import ScoreBadge from "./common/ScoreBadge";
+import Modal from "../common/Modal";
+import ScoreBadge from "../common/ScoreBadge";
 import {
   getListingStatus,
   getPropertyStatus,
   getSourceConfig,
-} from "../constants/statusConfig";
+} from "../../constants/statusConfig";
 import { ExternalLink, Calendar, Camera, DollarSign, Ruler, Layers, MapPin, User, Phone, FileText, Clock, Building2, Hash, CheckCircle, XCircle, AlertCircle } from "lucide-react";
 
 const ListingDetailModal = ({ isOpen, onClose, listing }) => {

@@ -6,16 +6,25 @@ import React, {
   useTransition,
 } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+
+// Components
 import CardView from "../components/common/CardView";
-import ListingDetailModal from "../components/ListingDetailModal";
+import ListingDetailModal from "../components/listings/ListingDetailModal";
 import Drawer from "../components/common/Drawer";
 import Button from "../components/common/Button";
 import SortDropdown from "../components/common/SortDropdown";
 import FilterSidebar from "../components/filters/FilterSidebar";
 import StatsDropdown from "../components/common/StatsDropdown";
+import EmptyState from "../components/common/EmptyState";
+
+// Hooks
 import useListingsData from "../hooks/useListingsData";
 import useListingsFilters from "../hooks/useListingsFilters";
+
+// Helpers
 import { renderListingCard } from "../helpers/renderers";
+
+// Icons
 import {
   Search,
   SlidersHorizontal,
@@ -27,11 +36,15 @@ import {
   Loader2,
 } from "lucide-react";
 
+
+// Main Component
+// ============================================
 export default function ListingsShow() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [isPending, startTransition] = useTransition();
 
+  // Data & Filters 
   const {
     filters,
     sortBy,
@@ -50,6 +63,7 @@ export default function ListingsShow() {
 
   const memoizedListings = useMemo(() => listings, [listings]);
 
+  // Detail Modal 
   const [selectedListing, setSelectedListing] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -63,20 +77,24 @@ export default function ListingsShow() {
     setSelectedListing(null);
   };
 
+  //  Navigation 
   const handleNavigate = (path) => {
     startTransition(() => {
       navigate(path);
     });
   };
 
-  const handleOpenFilter = useCallback(() => {
-    setIsFilterOpen(true);
-  }, [setIsFilterOpen]);
+  // Handlers 
+  const handleOpenFilter = useCallback(
+    () => setIsFilterOpen(true),
+    [setIsFilterOpen],
+  );
+  const handleCloseFilter = useCallback(
+    () => setIsFilterOpen(false),
+    [setIsFilterOpen],
+  );
 
-  const handleCloseFilter = useCallback(() => {
-    setIsFilterOpen(false);
-  }, [setIsFilterOpen]);
-
+  //  Loading / Error 
   if (loading && memoizedListings.length === 0) {
     return (
       <div className="flex items-center justify-center py-16">
@@ -89,10 +107,13 @@ export default function ListingsShow() {
     return <div className="text-center py-8 text-red-500">خطا: {error}</div>;
   }
 
+  // Render
+  // ============================================
   return (
     <>
       <div className="flex flex-col lg:flex-row gap-6">
         <div className="flex-1">
+          {/* Header */}
           <div className="flex flex-wrap justify-between items-center gap-3 mb-4">
             <h1 className="text-xl font-bold text-gray-800 flex items-center gap-3">
               📋 لیست آگهی‌ها
@@ -153,28 +174,17 @@ export default function ListingsShow() {
             </div>
           </div>
 
+          {/* Content */}
           <div
             className={`transition-opacity duration-300 ${isPending ? "opacity-50" : "opacity-100"}`}
           >
             {memoizedListings.length === 0 ? (
-              <div className="text-center py-12 bg-white rounded-xl border border-gray-100">
-                <Search
-                  className="w-12 h-12 text-gray-400 mx-auto mb-3"
-                  strokeWidth={1.5}
-                />
-                <h3 className="text-lg font-medium text-gray-700">
-                  هیچ آگهی یافت نشد
-                </h3>
-                <p className="text-sm text-gray-400 mt-1 max-w-md mx-auto">
-                  با فیلترهای انتخاب شده، آگهی‌ای وجود ندارد.
-                </p>
-                <button
-                  onClick={clearAllFilters}
-                  className="mt-4 px-4 py-2 text-sm text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50"
-                >
-                  حذف همه فیلترها
-                </button>
-              </div>
+              <EmptyState
+                title="هیچ آگهی یافت نشد"
+                message="با فیلترهای انتخاب شده، آگهی‌ای وجود ندارد."
+                actionText="حذف همه فیلترها"
+                onAction={clearAllFilters}
+              />
             ) : (
               <CardView
                 items={memoizedListings}
@@ -188,6 +198,7 @@ export default function ListingsShow() {
         </div>
       </div>
 
+      {/* Drawer */}
       <Drawer
         isOpen={isFilterOpen}
         onClose={handleCloseFilter}
@@ -200,6 +211,7 @@ export default function ListingsShow() {
         />
       </Drawer>
 
+      {/* Detail Modal */}
       <ListingDetailModal
         isOpen={isModalOpen}
         onClose={handleCloseModal}

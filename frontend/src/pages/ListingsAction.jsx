@@ -6,18 +6,27 @@ import React, {
   useTransition,
 } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import ListView from "../components/common/ListView";
-import ListingDetailModal from "../components/ListingDetailModal";
+
+// Components
+import ListingTable from "../components/listings/ListingTable";
+import ListingDetailModal from "../components/listings/ListingDetailModal";
 import Drawer from "../components/common/Drawer";
 import Button from "../components/common/Button";
 import SortDropdown from "../components/common/SortDropdown";
 import FilterSidebar from "../components/filters/FilterSidebar";
 import StatsDropdown from "../components/common/StatsDropdown";
+import ConfirmModal from "../components/common/ConfirmModal";
+import EmptyState from "../components/common/EmptyState";
+
+// Hooks
 import useListingsData from "../hooks/useListingsData";
 import useListingsFilters from "../hooks/useListingsFilters";
-import { renderListingRow, listingColumns } from "../helpers/renderers";
+import useListingActions from "../hooks/useListingActions";
+import useSelection from "../hooks/useSelection";
+import useDeleteModal from "../hooks/useDeleteModal";
+
+// Icons
 import {
-  Search,
   SlidersHorizontal,
   LayoutGrid,
   CheckCircle,
@@ -25,13 +34,18 @@ import {
   RefreshCw,
   XCircle,
   Loader2,
+  Trash2,
 } from "lucide-react";
 
+// ============================================
+// Main Component
+// ============================================
 export default function ListingsAction() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [isPending, startTransition] = useTransition();
 
+  // --- Data & Filters ---
   const {
     filters,
     sortBy,
@@ -50,49 +64,73 @@ export default function ListingsAction() {
 
   const memoizedListings = useMemo(() => listings, [listings]);
 
-  const [selectedListing, setSelectedListing] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  // --- Selection ---
+  const {
+    selectedIds,
+    handleSelectAll,
+    handleSelectOne,
+    clearSelection,
+    isAllSelected,
+    hasSelection,
+    selectionCount,
+  } = useSelection(memoizedListings);
 
-  const handleViewDetails = (listing) => {
-    setSelectedListing(listing);
-    setIsModalOpen(true);
+  // --- Delete Modal ---
+  const deleteModal = useDeleteModal();
+
+  // --- Actions ---
+  const { handleDelete, handleBulkDelete } = useListingActions(
+    (message) => console.log("Success:", message),
+    (message) => console.error("Error:", message)
+  );
+
+  const handleConfirmDelete = async () => {
+    const target = deleteModal.target;
+    let success = false;
+
+    if (deleteModal.isSingle()) {
+      success = await handleDelete(target.id);
+    } else if (deleteModal.isBulk()) {
+      success = await handleBulkDelete(target.ids);
+    }
+
+    if (success) {
+      deleteModal.close();
+      clearSelection();
+      fetchListings(filters);
+    }
   };
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setSelectedListing(null);
-  };
-
+  // --- Navigation ---
   const handleNavigate = (path) => {
     startTransition(() => {
       navigate(path);
     });
   };
 
-  const handleOpenFilter = useCallback(() => {
-    setIsFilterOpen(true);
-  }, [setIsFilterOpen]);
+  // --- Handlers ---
+  const handleOpenFilter = useCallback(() => setIsFilterOpen(true), [setIsFilterOpen]);
+  const handleCloseFilter = useCallback(() => setIsFilterOpen(false), [setIsFilterOpen]);
 
-  const handleCloseFilter = useCallback(() => {
-    setIsFilterOpen(false);
-  }, [setIsFilterOpen]);
+  const handleEdit = (listing) => console.log("Edit:", listing);
+  const handleStatusChange = (listing, newStatus) => console.log("Change status:", listing, newStatus);
+  const handleCall = (listing) => console.log("Register call:", listing);
 
-  const handleEdit = (listing) => {
-    console.log("Edit:", listing);
+  // --- Detail Modal ---
+  const [selectedListing, setSelectedListing] = useState(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+
+  const handleViewDetails = (listing) => {
+    setSelectedListing(listing);
+    setIsDetailModalOpen(true);
   };
 
-  const handleDelete = (listing) => {
-    console.log("Delete:", listing);
+  const handleCloseDetailModal = () => {
+    setIsDetailModalOpen(false);
+    setSelectedListing(null);
   };
 
-  const handleStatusChange = (listing) => {
-    console.log("Change status:", listing);
-  };
-
-  const handleCall = (listing) => {
-    console.log("Register call:", listing);
-  };
-
+  // --- Loading / Error ---
   if (loading && memoizedListings.length === 0) {
     return (
       <div className="flex items-center justify-center py-16">
@@ -105,13 +143,17 @@ export default function ListingsAction() {
     return <div className="text-center py-8 text-red-500">خطا: {error}</div>;
   }
 
+  // ============================================
+  // Render
+  // ============================================
   return (
     <>
       <div className="flex flex-col lg:flex-row gap-6">
         <div className="flex-1">
+          {/* Header */}
           <div className="flex flex-wrap justify-between items-center gap-3 mb-4">
             <h1 className="text-xl font-bold text-gray-800 flex items-center gap-3">
-              📋 لیست آگهی‌ها
+              ✏️ عملیات روی آگهی‌ها
               <StatsDropdown
                 items={memoizedListings}
                 groupBy="status"
@@ -139,8 +181,17 @@ export default function ListingsAction() {
             </h1>
 
             <div className="flex gap-2 flex-wrap items-center">
-              {isPending && (
-                <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />
+              {isPending && <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />}
+
+              {hasSelection && (
+                <Button
+                  variant="danger"
+                  size="sm"
+                  icon={<Trash2 size={16} />}
+                  onClick={() => deleteModal.openForBulk(selectedIds)}
+                >
+                  حذف گروهی ({selectionCount})
+                </Button>
               )}
 
               <SortDropdown value={sortBy} onChange={handleSortChange} />
@@ -158,65 +209,44 @@ export default function ListingsAction() {
                 variant="primary"
                 size="md"
                 icon={<LayoutGrid size={18} />}
-                onClick={() =>
-                  handleNavigate(`/listings/show?${searchParams.toString()}`)
-                }
+                onClick={() => handleNavigate(`/listings/show?${searchParams.toString()}`)}
                 disabled={isPending}
                 className={isPending ? "opacity-60" : ""}
               >
-                نمایش 
+                نمایش
               </Button>
             </div>
           </div>
 
-          <div
-            className={`transition-opacity duration-300 ${isPending ? "opacity-50" : "opacity-100"}`}
-          >
+          {/* Content */}
+          <div className={`transition-opacity duration-300 ${isPending ? "opacity-50" : "opacity-100"}`}>
             {memoizedListings.length === 0 ? (
-              <div className="text-center py-12 bg-white rounded-xl border border-gray-100">
-                <Search
-                  className="w-12 h-12 text-gray-400 mx-auto mb-3"
-                  strokeWidth={1.5}
-                />
-                <h3 className="text-lg font-medium text-gray-700">
-                  هیچ آگهی یافت نشد
-                </h3>
-                <p className="text-sm text-gray-400 mt-1 max-w-md mx-auto">
-                  با فیلترهای انتخاب شده، آگهی‌ای وجود ندارد.
-                </p>
-                <button
-                  onClick={clearAllFilters}
-                  className="mt-4 px-4 py-2 text-sm text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50"
-                >
-                  حذف همه فیلترها
-                </button>
-              </div>
+              <EmptyState
+                title="هیچ آگهی یافت نشد"
+                message="با فیلترهای انتخاب شده، آگهی‌ای وجود ندارد."
+                actionText="حذف همه فیلترها"
+                onAction={clearAllFilters}
+              />
             ) : (
-              <ListView
-                items={memoizedListings}
-                columns={listingColumns}
-                renderRow={(listing, index) =>
-                  renderListingRow(
-                    listing,
-                    index,
-                    handleViewDetails,
-                    handleEdit,
-                    handleDelete,
-                    handleStatusChange,
-                    handleCall,
-                  )
-                }
+              <ListingTable
+                listings={memoizedListings}
+                onViewDetails={handleViewDetails}
+                onEdit={handleEdit}
+                onDelete={deleteModal.openForSingle}
+                onStatusChange={handleStatusChange}
+                onCall={handleCall}
+                selectedIds={selectedIds}
+                onSelectOne={handleSelectOne}
+                onSelectAll={handleSelectAll}
+                isAllSelected={isAllSelected}
               />
             )}
           </div>
         </div>
       </div>
 
-      <Drawer
-        isOpen={isFilterOpen}
-        onClose={handleCloseFilter}
-        position="right"
-      >
+      {/* Drawer */}
+      <Drawer isOpen={isFilterOpen} onClose={handleCloseFilter} position="right">
         <FilterSidebar
           filters={filters}
           onFilterChange={handleFilterChange}
@@ -224,10 +254,23 @@ export default function ListingsAction() {
         />
       </Drawer>
 
+      {/* Detail Modal */}
       <ListingDetailModal
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
+        isOpen={isDetailModalOpen}
+        onClose={handleCloseDetailModal}
         listing={selectedListing}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={deleteModal.isOpen}
+        onClose={deleteModal.close}
+        onConfirm={handleConfirmDelete}
+        title={deleteModal.getTitle()}
+        message={deleteModal.getMessage()}
+        confirmText="حذف"
+        cancelText="انصراف"
+        variant="danger"
       />
     </>
   );

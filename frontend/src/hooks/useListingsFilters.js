@@ -1,6 +1,14 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 
+/**
+ * Hook for managing listing filters with URL sync
+ * @param {Object} options - Configuration options
+ * @param {string} options.defaultSort - Default sort value (default: '-score')
+ * @param {boolean} options.syncWithURL - Sync filters with URL (default: true)
+ * @returns {Object} Filter state and handlers
+ */
+
 const useListingsFilters = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const isFirstRender = useRef(true);
