@@ -6,6 +6,7 @@ import React, {
   useTransition,
 } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import toast from "react-hot-toast";
 
 // Components
 import ListingTable from "../components/listings/ListingTable";
@@ -15,7 +16,7 @@ import Button from "../components/common/Button";
 import SortDropdown from "../components/common/SortDropdown";
 import FilterSidebar from "../components/filters/FilterSidebar";
 import StatsDropdown from "../components/common/StatsDropdown";
-import ConfirmModal from "../components/common/ConfirmModal";
+import ModalManager from "../components/common/ModalManager";
 import EmptyState from "../components/common/EmptyState";
 
 // Hooks
@@ -23,7 +24,7 @@ import useListingsData from "../hooks/useListingsData";
 import useListingsFilters from "../hooks/useListingsFilters";
 import useListingActions from "../hooks/useListingActions";
 import useSelection from "../hooks/useSelection";
-import useDeleteModal from "../hooks/useDeleteModal";
+import useModal from "../hooks/useModal";
 
 // Icons
 import {
@@ -37,9 +38,6 @@ import {
   Trash2,
 } from "lucide-react";
 
-// ============================================
-// Main Component
-// ============================================
 export default function ListingsAction() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -75,30 +73,67 @@ export default function ListingsAction() {
     selectionCount,
   } = useSelection(memoizedListings);
 
-  // --- Delete Modal ---
-  const deleteModal = useDeleteModal();
+  // --- Modal ---
+  const modal = useModal();
 
   // --- Actions ---
-  const { handleDelete, handleBulkDelete } = useListingActions(
-    (message) => console.log("Success:", message),
-    (message) => console.error("Error:", message)
-  );
+  const { handleDelete, handleBulkDelete, handleStatusChange } =
+    useListingActions();
 
-  const handleConfirmDelete = async () => {
-    const target = deleteModal.target;
-    let success = false;
+  // ============================================
+  // Delete Handlers
+  // ============================================
+  const openDeleteModal = (listing) => {
+    modal.open("delete", { type: "single", id: listing.id });
+  };
 
-    if (deleteModal.isSingle()) {
-      success = await handleDelete(target.id);
-    } else if (deleteModal.isBulk()) {
-      success = await handleBulkDelete(target.ids);
+  const openBulkDeleteModal = () => {
+    if (selectedIds.length === 0) return;
+    modal.open("delete", { type: "bulk", ids: [...selectedIds] });
+  };
+
+  // ============================================
+  // Status Change Handler
+  // ============================================
+  const openStatusChangeModal = (listing, newStatus) => {
+    modal.open("status_change", { listing, newStatus });
+  };
+
+  // ============================================
+  // Modal Confirm Handler
+  // ============================================
+  const handleModalConfirm = async () => {
+    const { type, data } = modal;
+
+    if (type === "delete") {
+      let success = false;
+      if (data?.type === "single") {
+        success = await handleDelete(data.id);
+      } else if (data?.type === "bulk") {
+        success = await handleBulkDelete(data.ids);
+      }
+      if (success) {
+        clearSelection();
+        fetchListings(filters);
+        modal.close();
+      }
+      return success;
     }
 
-    if (success) {
-      deleteModal.close();
-      clearSelection();
-      fetchListings(filters);
+    if (type === "status_change") {
+      const { listing, newStatus } = data;
+      if (listing && newStatus) {
+        const result = await handleStatusChange(listing.id, newStatus);
+        if (result) {
+          fetchListings(filters);
+          modal.close();
+          return result;
+        }
+      }
+      return false;
     }
+
+    return false;
   };
 
   // --- Navigation ---
@@ -109,11 +144,16 @@ export default function ListingsAction() {
   };
 
   // --- Handlers ---
-  const handleOpenFilter = useCallback(() => setIsFilterOpen(true), [setIsFilterOpen]);
-  const handleCloseFilter = useCallback(() => setIsFilterOpen(false), [setIsFilterOpen]);
+  const handleOpenFilter = useCallback(
+    () => setIsFilterOpen(true),
+    [setIsFilterOpen],
+  );
+  const handleCloseFilter = useCallback(
+    () => setIsFilterOpen(false),
+    [setIsFilterOpen],
+  );
 
   const handleEdit = (listing) => console.log("Edit:", listing);
-  const handleStatusChange = (listing, newStatus) => console.log("Change status:", listing, newStatus);
   const handleCall = (listing) => console.log("Register call:", listing);
 
   // --- Detail Modal ---
@@ -143,7 +183,6 @@ export default function ListingsAction() {
     return <div className="text-center py-8 text-red-500">خطا: {error}</div>;
   }
 
-  // ============================================
   // Render
   // ============================================
   return (
@@ -181,14 +220,16 @@ export default function ListingsAction() {
             </h1>
 
             <div className="flex gap-2 flex-wrap items-center">
-              {isPending && <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />}
+              {isPending && (
+                <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />
+              )}
 
               {hasSelection && (
                 <Button
                   variant="danger"
                   size="sm"
                   icon={<Trash2 size={16} />}
-                  onClick={() => deleteModal.openForBulk(selectedIds)}
+                  onClick={openBulkDeleteModal}
                 >
                   حذف گروهی ({selectionCount})
                 </Button>
@@ -209,7 +250,9 @@ export default function ListingsAction() {
                 variant="primary"
                 size="md"
                 icon={<LayoutGrid size={18} />}
-                onClick={() => handleNavigate(`/listings/show?${searchParams.toString()}`)}
+                onClick={() =>
+                  handleNavigate(`/listings/show?${searchParams.toString()}`)
+                }
                 disabled={isPending}
                 className={isPending ? "opacity-60" : ""}
               >
@@ -219,7 +262,9 @@ export default function ListingsAction() {
           </div>
 
           {/* Content */}
-          <div className={`transition-opacity duration-300 ${isPending ? "opacity-50" : "opacity-100"}`}>
+          <div
+            className={`transition-opacity duration-300 ${isPending ? "opacity-50" : "opacity-100"}`}
+          >
             {memoizedListings.length === 0 ? (
               <EmptyState
                 title="هیچ آگهی یافت نشد"
@@ -232,8 +277,8 @@ export default function ListingsAction() {
                 listings={memoizedListings}
                 onViewDetails={handleViewDetails}
                 onEdit={handleEdit}
-                onDelete={deleteModal.openForSingle}
-                onStatusChange={handleStatusChange}
+                onDelete={openDeleteModal}
+                onStatusChange={openStatusChangeModal}
                 onCall={handleCall}
                 selectedIds={selectedIds}
                 onSelectOne={handleSelectOne}
@@ -246,7 +291,11 @@ export default function ListingsAction() {
       </div>
 
       {/* Drawer */}
-      <Drawer isOpen={isFilterOpen} onClose={handleCloseFilter} position="right">
+      <Drawer
+        isOpen={isFilterOpen}
+        onClose={handleCloseFilter}
+        position="right"
+      >
         <FilterSidebar
           filters={filters}
           onFilterChange={handleFilterChange}
@@ -261,16 +310,11 @@ export default function ListingsAction() {
         listing={selectedListing}
       />
 
-      {/* Delete Confirmation Modal */}
-      <ConfirmModal
-        isOpen={deleteModal.isOpen}
-        onClose={deleteModal.close}
-        onConfirm={handleConfirmDelete}
-        title={deleteModal.getTitle()}
-        message={deleteModal.getMessage()}
-        confirmText="حذف"
-        cancelText="انصراف"
-        variant="danger"
+      {/* Modal Manager (Delete + Status Change) */}
+      <ModalManager
+        modal={modal}
+        onClose={modal.close}
+        onConfirm={handleModalConfirm}
       />
     </>
   );

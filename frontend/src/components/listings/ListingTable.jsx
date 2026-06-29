@@ -40,7 +40,7 @@ const StatusDropdown = ({ listing, onStatusChange }) => {
   return (
     <Dropdown
       trigger={
-        <button className="text-gray-400 hover:text-gray-600 p-0.5 rounded hover:bg-gray-100">
+        <button className="text-gray-400 cursor-pointer hover:text-gray-600 p-0.5 rounded hover:bg-gray-100">
           <RefreshCw size={12} />
         </button>
       }
@@ -64,7 +64,7 @@ const ActionMenu = ({ listing, onViewDetails, onEdit, onDelete, onCall }) => {
   return (
     <Dropdown
       trigger={
-        <button className="text-gray-400 hover:text-gray-600 p-1 rounded hover:bg-gray-100">
+        <button className="text-gray-400 cursor-pointer hover:text-gray-600 p-1 rounded hover:bg-gray-100">
           <MoreHorizontal size={16} />
         </button>
       }
@@ -151,7 +151,7 @@ const ListingRow = ({
         </div>
       </Table.Cell>
 
-      <Table.Cell align="center" width="40px">
+      <Table.Cell align="center" width="40px" className="relative">
         <ActionMenu
           listing={item}
           onViewDetails={onViewDetails}
