@@ -1,3 +1,5 @@
+import { CheckCircle, Phone, AlertCircle, Building2, XCircle } from "lucide-react";
+
 // Listing status config
 export const LISTING_STATUS = {
   reviewed: { text: 'بررسی شده', bgColor: 'bg-yellow-100', textColor: 'text-yellow-800' },
@@ -46,3 +48,26 @@ export const getScoreConfig = (score) => {
 export const getSourceConfig = (source) => {
   return SOURCE_CONFIG[source] || SOURCE_CONFIG.internal
 }
+
+export const getBorderColor = (score) => {
+  if (score >= 80) return "border-emerald-500";
+  if (score >= 60) return "border-emerald-400";
+  if (score >= 40) return "border-yellow-500";
+  if (score >= 20) return "border-orange-500";
+  return "border-red-500";
+};
+
+export const getStatusIcon = (status) => {
+  switch (status) {
+    case "reviewed":
+      return <CheckCircle size={16} />;
+    case "contacted":
+      return <Phone size={14} />;
+    case "converted":
+      return <Building2 size={14} />;
+    case "rejected":
+      return <XCircle size={14} />;
+    default:
+      return <AlertCircle size={14} />;
+  }
+};

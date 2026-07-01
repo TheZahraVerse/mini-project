@@ -1,3 +1,7 @@
-from django.shortcuts import render
+from rest_framework import generics
+from .models import Owner
+from .serializers import OwnerSerializer
 
-# Create your views here.
+class OwnerDetailView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Owner.objects.all()
+    serializer_class = OwnerSerializer

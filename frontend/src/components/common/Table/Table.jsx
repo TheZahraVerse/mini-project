@@ -1,12 +1,10 @@
 import React from "react";
 
-const Table = ({ children, className = "", maxHeight = "500px" }) => {
+const Table = ({ children, className = "" }) => {
   return (
-    <div
-      className={`bg-white rounded-xl border border-gray-200 shadow-sm ${className}`}
-    >
-      <div className="overflow-x-auto overflow-y-auto" style={{ maxHeight }}>
-        <table className="w-full text-sm">{children}</table>
+    <div className={`bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden ${className}`}>
+      <div className="overflow-x-auto overflow-y-visible">
+        <table className="w-full text-sm min-w-175">{children}</table>
       </div>
     </div>
   );
@@ -15,19 +13,13 @@ const Table = ({ children, className = "", maxHeight = "500px" }) => {
 const Header = ({ children, className = "" }) => {
   return (
     <thead>
-      <tr className={`bg-gray-50/80 border-b border-gray-200 ${className}`}>
-        {children}
-      </tr>
+      <tr className={`bg-gray-50/80 border-b border-gray-200 ${className}`}>{children}</tr>
     </thead>
   );
 };
 
 const Column = ({ children, className = "", align = "right", width }) => {
-  const alignClasses = {
-    right: "text-right",
-    center: "text-center",
-    left: "text-left",
-  };
+  const alignClasses = { right: "text-right", center: "text-center", left: "text-left" };
   return (
     <th
       className={`p-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap ${alignClasses[align]} ${className}`}
@@ -45,7 +37,7 @@ const Body = ({ children, className = "" }) => {
 const Row = ({ children, className = "", onClick = null }) => {
   return (
     <tr
-      className={`transition-all duration-300 bg-white hover:-translate-y-1 border border-gray-100 hover:border-gray-300 even:bg-gray-50/30 ${className}`}
+      className={`border-b border-gray-100 hover:bg-gray-50/60 transition-colors even:bg-gray-50/30 ${className}`}
       onClick={onClick}
     >
       {children}
@@ -53,18 +45,8 @@ const Row = ({ children, className = "", onClick = null }) => {
   );
 };
 
-const Cell = ({
-  children,
-  className = "",
-  align = "right",
-  width,
-  colSpan,
-}) => {
-  const alignClasses = {
-    right: "text-right",
-    center: "text-center",
-    left: "text-left",
-  };
+const Cell = ({ children, className = "", align = "right", width, colSpan }) => {
+  const alignClasses = { right: "text-right", center: "text-center", left: "text-left" };
   return (
     <td
       colSpan={colSpan}

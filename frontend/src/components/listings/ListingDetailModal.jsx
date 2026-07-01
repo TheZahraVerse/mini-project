@@ -1,244 +1,268 @@
-import React from "react";
-import Modal from "../common/Modal";
-import ScoreBadge from "../common/ScoreBadge";
-import {
-  getListingStatus,
-  getPropertyStatus,
-  getSourceConfig,
-} from "../../constants/statusConfig";
-import { ExternalLink, Calendar, Camera, DollarSign, Ruler, Layers, MapPin, User, Phone, FileText, Clock, Building2, Hash, CheckCircle, XCircle, AlertCircle } from "lucide-react";
+// components/listings/ListingDetailModal.jsx
+import React, { useState, useEffect } from "react";
+import toast from "react-hot-toast";
+import Modal from "../common/modal/Modal";
+import ConfirmModal from "../common/modal/ConfirmModal";
+import ListingDetailHeader from "./ListingDetailHeader";
+import PropertyDetails from "./PropertyDetails";
+import OwnerDetails from "./OwnerDetails";
+import { getBorderColor } from "../../constants/statusConfig";
+import { Edit2, X, Save, Camera, ExternalLink } from "lucide-react";
 
-const ListingDetailModal = ({ isOpen, onClose, listing }) => {
+// ============================================
+// Main Component
+// ============================================
+const ListingDetailModal = ({ 
+  isOpen, 
+  onClose, 
+  listing, 
+  mode = "view", // "view" | "edit"
+  onSave, 
+  onUpdate 
+}) => {
+  // State for edit mode
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editedPropertyStatus, setEditedPropertyStatus] = useState("");
+  const [editedOwnerNotes, setEditedOwnerNotes] = useState("");
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Reset state when modal opens or listing changes
+  useEffect(() => {
+    if (isOpen && listing) {
+      setEditedPropertyStatus(listing.property?.status || "");
+      setEditedOwnerNotes(listing.property?.owner?.notes || "");
+      setIsEditMode(false);
+    }
+  }, [isOpen, listing]);
+
   if (!listing) return null;
 
-  const { property, source, source_url, image_count, score, status, created_at } = listing;
-  const owner = property?.owner;
+  const { property, score } = listing;
+  const owner = listing.property?.owner;
+  const borderColor = getBorderColor(score);
+  const borderBg = borderColor.replace("border", "bg");
 
-  const statusConfig = getListingStatus(status);
-  const propertyStatusConfig = getPropertyStatus(property?.status);
-  const sourceConfig = getSourceConfig(source);
-
-  const formattedDate = new Date(created_at).toLocaleDateString("fa-IR", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-  const formattedTime = new Date(created_at).toLocaleTimeString("fa-IR", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-
-  const getBorderColor = (score) => {
-    if (score >= 80) return "border-emerald-500";
-    if (score >= 60) return "border-emerald-400";
-    if (score >= 40) return "border-yellow-500";
-    if (score >= 20) return "border-orange-500";
-    return "border-red-500";
+  // ============================================
+  // Edit Handlers
+  // ============================================
+  const handleEditToggle = () => {
+    if (isEditMode) {
+      setEditedPropertyStatus(property?.status || "");
+      setEditedOwnerNotes(owner?.notes || "");
+    }
+    setIsEditMode(!isEditMode);
   };
 
-  const borderColor = getBorderColor(score);
+  const handleSaveClick = () => {
+    setShowConfirmModal(true);
+  };
 
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case "reviewed": return <CheckCircle size={16} />;
-      case "contacted": return <Phone size={14} />;
-      case "converted": return <Building2 size={14} />;
-      case "rejected": return <XCircle size={14} />;
-      default: return <AlertCircle size={14} />;
+  const handleConfirmSave = async () => {
+    setIsSaving(true);
+    try {
+      const result = await onSave?.({
+        propertyId: property?.id,
+        ownerId: owner?.id,
+        propertyData: { status: editedPropertyStatus },
+        ownerData: { notes: editedOwnerNotes },
+      });
+
+      if (result !== false) {
+        const updatedListing = {
+          ...listing,
+          property: {
+            ...listing.property,
+            status: editedPropertyStatus,
+            owner: {
+              ...listing.property?.owner,
+              notes: editedOwnerNotes,
+            },
+          },
+        };
+
+        if (onUpdate) {
+          onUpdate(updatedListing);
+        }
+
+        setIsEditMode(false);
+        setShowConfirmModal(false);
+      }
+    } catch (error) {
+      console.error("Save error:", error);
+    } finally {
+      setIsSaving(false);
     }
   };
 
+  const hasChanges =
+    editedPropertyStatus !== property?.status ||
+    editedOwnerNotes !== (owner?.notes || "");
+
+  // ============================================
+  // Render
+  // ============================================
+  const isEditable = mode === "edit";
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="جزئیات آگهی">
-      <div className="space-y-5">
-        
-        {/* ========== HEADER CARD ========== */}
-        <div className={`bg-linear-to-r from-white to-gray-50 rounded-xl border-l-4 ${borderColor} p-4 shadow-sm`}>
-          <div className="flex flex-wrap gap-4 justify-between items-center">
-            
-            {/* Score Badge - جایگزین دایره امتیاز قبلی */}
-            <div className="flex items-center gap-3">
-              <ScoreBadge score={score} size="lg" showLabel={true} showIcon={true} />
+    <>
+      <Modal isOpen={isOpen} onClose={onClose} title="جزئیات آگهی">
+        <div className="space-y-5">
+          {/* Header */}
+          <ListingDetailHeader listing={listing} borderColor={borderColor}/>
+
+          {/* Listing Info */}
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <div className={`w-1 h-5 rounded-full ${borderBg}`} />
+              <h3 className="text-base font-bold text-gray-800">
+                اطلاعات آگهی
+              </h3>
+            </div>
+            <div className="grid grid-cols-2 gap-3 bg-gray-50/80 rounded-xl p-4">
               <div>
-                <p className="text-xs text-gray-400 mb-1">وضعیت آگهی</p>
-                <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium ${statusConfig.bgColor} ${statusConfig.textColor}`}>
-                  {getStatusIcon(status)}
-                  <span>{statusConfig.text}</span>
+                <p className="text-xs text-gray-400 mb-0.5">تعداد عکس</p>
+                <div className="flex items-center gap-1.5">
+                  <Camera size={14} className="text-gray-400" />
+                  <span className="text-sm font-medium text-gray-800">
+                    {listing.image_count}
+                  </span>
+                  {listing.image_count === 0 && (
+                    <span className="text-xs text-red-500 bg-red-50 px-1.5 py-0.5 rounded-full">
+                      بدون عکس
+                    </span>
+                  )}
                 </div>
               </div>
-            </div>
-
-            {/* Source and Date */}
-            <div className="text-left">
-              <div className="flex items-center gap-2 justify-end mb-2">
-                <span className="text-xl">{sourceConfig.icon}</span>
-                <span className="text-sm font-semibold text-gray-700">{sourceConfig.name}</span>
-                {source_url && (
+              {listing.source_url && (
+                <div className="col-span-2 mt-1 pt-1 border-t border-gray-100">
+                  <p className="text-xs text-gray-400 mb-1">لینک آگهی</p>
                   <a
-                    href={source_url}
+                    href={listing.source_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-blue-500 hover:text-blue-700 transition-colors"
-                    title="مشاهده آگهی در منبع اصلی"
+                    className="text-sm text-blue-600 hover:text-blue-800 hover:underline break-all flex items-center gap-1"
                   >
-                    <ExternalLink size={14} />
+                    <ExternalLink size={12} />
+                    {listing.source_url.length > 50
+                      ? `${listing.source_url.substring(0, 50)}...`
+                      : listing.source_url}
                   </a>
-                )}
-              </div>
-              <div className="flex items-center gap-1 text-xs text-gray-400">
-                <Calendar size={12} />
-                <span>{formattedDate}</span>
-                <Clock size={12} className="mr-2" />
-                <span>{formattedTime}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* ========== SECTION 1: LISTING DETAILS ========== */}
-        <div>
-          <div className="flex items-center gap-2 mb-3">
-            <div className={`w-1 h-5 rounded-full ${borderColor.replace("border", "bg")}`} />
-            <h3 className="text-base font-bold text-gray-800">اطلاعات آگهی</h3>
-          </div>
-          <div className="grid grid-cols-2 gap-3 bg-gray-50/80 rounded-xl p-4">
-            <div>
-              <p className="text-xs text-gray-400 mb-0.5">تعداد عکس</p>
-              <div className="flex items-center gap-1.5">
-                <Camera size={14} className="text-gray-400" />
-                <span className="text-sm font-medium text-gray-800">{image_count}</span>
-                {image_count === 0 && (
-                  <span className="text-xs text-red-500 bg-red-50 px-1.5 py-0.5 rounded-full">بدون عکس</span>
-                )}
-              </div>
-            </div>
-            {source_url && (
-              <div className="col-span-2 mt-1 pt-1 border-t border-gray-100">
-                <p className="text-xs text-gray-400 mb-1">لینک آگهی</p>
-                <a
-                  href={source_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm text-blue-600 hover:text-blue-800 hover:underline break-all flex items-center gap-1"
-                >
-                  <ExternalLink size={12} />
-                  {source_url.length > 50 ? `${source_url.substring(0, 50)}...` : source_url}
-                </a>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* ========== SECTION 2: PROPERTY DETAILS ========== */}
-        <div>
-          <div className="flex items-center gap-2 mb-3">
-            <div className={`w-1 h-5 rounded-full ${borderColor.replace("border", "bg")}`} />
-            <h3 className="text-base font-bold text-gray-800">مشخصات ملک</h3>
-          </div>
-          <div className="bg-gray-50/80 rounded-xl p-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="sm:col-span-2 pb-2 border-b border-gray-100 mb-1">
-                <p className="text-xs text-gray-400 mb-0.5">عنوان ملک</p>
-                <p className="text-base font-bold text-gray-800">{property?.title}</p>
-              </div>
-              
-              <div>
-                <p className="text-xs text-gray-400 mb-0.5">قیمت</p>
-                <div className="flex items-center gap-1">
-                  <DollarSign size={14} className="text-gray-400" />
-                  <span className="text-sm font-semibold text-gray-800">{property?.price?.toLocaleString()} تومان</span>
-                </div>
-              </div>
-              
-              <div>
-                <p className="text-xs text-gray-400 mb-0.5">متراژ</p>
-                <div className="flex items-center gap-1">
-                  <Ruler size={14} className="text-gray-400" />
-                  <span className="text-sm font-medium text-gray-800">{property?.area} متر</span>
-                </div>
-              </div>
-              
-              <div>
-                <p className="text-xs text-gray-400 mb-0.5">تعداد اتاق</p>
-                <div className="flex items-center gap-1">
-                  <Layers size={14} className="text-gray-400" />
-                  <span className="text-sm font-medium text-gray-800">{property?.rooms || "ندارد"}</span>
-                </div>
-              </div>
-              
-              <div>
-                <p className="text-xs text-gray-400 mb-0.5">طبقه</p>
-                <div className="flex items-center gap-1">
-                  <Hash size={14} className="text-gray-400" />
-                  <span className="text-sm font-medium text-gray-800">{property?.floor === 0 ? "همکف" : property?.floor}</span>
-                </div>
-              </div>
-              
-              <div>
-                <p className="text-xs text-gray-400 mb-0.5">وضعیت ملک</p>
-                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${propertyStatusConfig.bgColor} ${propertyStatusConfig.color}`}>
-                  <Building2 size={12} />
-                  {propertyStatusConfig.text}
-                </span>
-              </div>
-              
-              <div className="sm:col-span-2">
-                <p className="text-xs text-gray-400 mb-0.5">آدرس</p>
-                <div className="flex items-start gap-1">
-                  <MapPin size={14} className="text-gray-400 shrink-0 mt-0.5" />
-                  <span className="text-sm text-gray-700">{property?.address}</span>
-                </div>
-              </div>
-              
-              {property?.description && (
-                <div className="sm:col-span-2">
-                  <p className="text-xs text-gray-400 mb-1">توضیحات</p>
-                  <div className="flex items-start gap-1">
-                    <FileText size={14} className="text-gray-400 shrink-0 mt-0.5" />
-                    <p className="text-sm text-gray-600 leading-relaxed">{property.description}</p>
-                  </div>
                 </div>
               )}
             </div>
           </div>
-        </div>
 
-        {/* ========== SECTION 3: OWNER DETAILS ========== */}
-        {owner && (
+          {/* Property Details */}
           <div>
-            <div className="flex items-center gap-2 mb-3">
-              <div className={`w-1 h-5 rounded-full ${borderColor.replace("border", "bg")}`} />
-              <h3 className="text-base font-bold text-gray-800">اطلاعات مالک</h3>
-            </div>
-            <div className="bg-linear-to-r from-blue-50/50 to-white rounded-xl p-4 border border-blue-100">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <p className="text-xs text-gray-400 mb-0.5">نام مالک</p>
-                  <div className="flex items-center gap-1">
-                    <User size={14} className="text-gray-400" />
-                    <span className="text-sm font-medium text-gray-800">{owner.name}</span>
-                  </div>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-400 mb-0.5">شماره تماس</p>
-                  <div className="flex items-center gap-1">
-                    <Phone size={14} className="text-gray-400" />
-                    <span className="text-sm font-medium text-gray-800 dir-ltr">{owner.phone}</span>
-                  </div>
-                </div>
-                {owner.notes && (
-                  <div className="sm:col-span-2">
-                    <p className="text-xs text-gray-400 mb-0.5">یادداشت</p>
-                    <p className="text-sm text-gray-600 bg-white p-2 rounded-lg border">{owner.notes}</p>
-                  </div>
-                )}
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div className={`w-1 h-5 rounded-full ${borderBg}`} />
+                <h3 className="text-base font-bold text-gray-800">
+                  مشخصات ملک
+                </h3>
               </div>
+              {isEditable && (
+                <button
+                  onClick={handleEditToggle}
+                  className="text-sm text-blue-600 cursor-pointer hover:text-blue-800 flex items-center gap-1"
+                >
+                  {isEditMode ? (
+                    <>
+                      <X size={14} /> انصراف
+                    </>
+                  ) : (
+                    <>
+                      <Edit2 size={14} /> ویرایش
+                    </>
+                  )}
+                </button>
+              )}
             </div>
-          </div>
-        )}
 
-      </div>
-    </Modal>
+            <PropertyDetails
+              property={property}
+              isEditMode={isEditable && isEditMode}
+              editedPropertyStatus={editedPropertyStatus}
+              onPropertyStatusChange={setEditedPropertyStatus}
+              borderBg={borderBg}
+            />
+          </div>
+
+          {/* Owner Details */}
+          <OwnerDetails
+            owner={owner}
+            isEditMode={isEditable && isEditMode}
+            editedOwnerNotes={editedOwnerNotes}
+            onOwnerNotesChange={setEditedOwnerNotes}
+            borderBg={borderBg}
+          />
+
+          {/* Save Button  */}
+          {isEditable && isEditMode && (
+            <div className="flex justify-end pt-4 border-t">
+              <button
+                onClick={handleSaveClick}
+                disabled={!hasChanges || isSaving}
+                className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${
+                  !hasChanges || isSaving
+                    ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                    : "bg-blue-500 text-white hover:bg-blue-600 cursor-pointer "
+                }`}
+              >
+                <Save size={16} />
+                {isSaving ? "در حال ذخیره..." : "ذخیره تغییرات"}
+              </button>
+            </div>
+          )}
+        </div>
+      </Modal>
+
+      {/* Confirm Modal - فقط در حالت edit */}
+      {isEditable && (
+        <ConfirmModal
+          isOpen={showConfirmModal}
+          onClose={() => setShowConfirmModal(false)}
+          onConfirm={handleConfirmSave}
+          title="تأیید ذخیره تغییرات"
+          message="آیا از اعمال تغییرات روی وضعیت ملک و یادداشت مالک مطمئن هستید؟"
+          confirmText="ذخیره تغییرات"
+          cancelText="انصراف"
+          variant="info"
+          isLoading={isSaving}
+        />
+      )}
+    </>
+  );
+};
+
+// ============================================
+// Sub-components
+// ============================================
+
+// show
+ListingDetailModal.Show = ({ isOpen, onClose, listing }) => {
+  return (
+    <ListingDetailModal
+      isOpen={isOpen}
+      onClose={onClose}
+      listing={listing}
+      mode="view"
+    />
+  );
+};
+
+// edit
+ListingDetailModal.Edit = ({ isOpen, onClose, listing, onSave, onUpdate }) => {
+  return (
+    <ListingDetailModal
+      isOpen={isOpen}
+      onClose={onClose}
+      listing={listing}
+      mode="edit"
+      onSave={onSave}
+      onUpdate={onUpdate}
+    />
   );
 };
 

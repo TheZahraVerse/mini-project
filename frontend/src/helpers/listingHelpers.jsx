@@ -21,3 +21,15 @@ export const getListingDisplayInfo = (listing) => {
     id: listing.id,
   };
 };
+
+export const formatPrice = (price) => {
+  if (!price) return "نامشخص";
+  return price.toLocaleString();
+};
+
+export const getFloorDisplay = (floor) => {
+  if (floor === 0 || floor === "0") return "همکف";
+  if (floor === -1 || floor === "-1") return "زیرزمین";
+  if (!floor && floor !== 0) return "نامشخص";
+  return floor;
+};

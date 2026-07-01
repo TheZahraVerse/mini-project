@@ -1,3 +1,4 @@
+// ListingsAction.jsx
 import React, {
   useState,
   useEffect,
@@ -13,10 +14,10 @@ import ListingTable from "../components/listings/ListingTable";
 import ListingDetailModal from "../components/listings/ListingDetailModal";
 import Drawer from "../components/common/Drawer";
 import Button from "../components/common/Button";
-import SortDropdown from "../components/common/SortDropdown";
+import SortDropdown from "../components/common/dropdown/SortDropdown";
 import FilterSidebar from "../components/filters/FilterSidebar";
-import StatsDropdown from "../components/common/StatsDropdown";
-import ModalManager from "../components/common/ModalManager";
+import StatsDropdown from "../components/common/dropdown/StatsDropdown";
+import ModalManager from "../components/common/modal/ModalManager";
 import EmptyState from "../components/common/EmptyState";
 
 // Hooks
@@ -77,8 +78,8 @@ export default function ListingsAction() {
   const modal = useModal();
 
   // --- Actions ---
-  const { handleDelete, handleBulkDelete, handleStatusChange } =
-    useListingActions();
+  const { handleDelete, handleBulkDelete, handleStatusChange, handleEdit } =
+    useListingActions(fetchListings, filters);
 
   // ============================================
   // Delete Handlers
@@ -153,22 +154,75 @@ export default function ListingsAction() {
     [setIsFilterOpen],
   );
 
-  const handleEdit = (listing) => console.log("Edit:", listing);
   const handleCall = (listing) => console.log("Register call:", listing);
 
-  // --- Detail Modal ---
+  // Detail Modal
+  // ============================================
   const [selectedListing, setSelectedListing] = useState(null);
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [isShowModalOpen, setIsShowModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   const handleViewDetails = (listing) => {
     setSelectedListing(listing);
-    setIsDetailModalOpen(true);
+    setIsShowModalOpen(true);
   };
 
-  const handleCloseDetailModal = () => {
-    setIsDetailModalOpen(false);
+  const handleCloseShowModal = () => {
+    setIsShowModalOpen(false);
     setSelectedListing(null);
   };
+
+  const handleEditClick = (listing) => {
+    setSelectedListing(listing);
+    setIsEditModalOpen(true);
+  };
+
+  const handleCloseEditModal = () => {
+    setIsEditModalOpen(false);
+    setSelectedListing(null);
+  };
+
+  // Update selected listing when listings change
+  useEffect(() => {
+    if (selectedListing && (isShowModalOpen || isEditModalOpen)) {
+      const updated = listings.find((l) => l.id === selectedListing.id);
+      if (updated) {
+        setSelectedListing(updated);
+      }
+    }
+  }, [listings, selectedListing?.id, isShowModalOpen, isEditModalOpen]);
+
+  // Wrapper for handleEdit with update logic
+  const handleEditWrapper = useCallback(
+    async (data) => {
+      const result = await handleEdit(data);
+      if (result && selectedListing) {
+        const updated = listings.find((l) => l.id === selectedListing.id);
+        if (updated) {
+          setSelectedListing(updated);
+        } else {
+          const updatedListing = {
+            ...selectedListing,
+            property: {
+              ...selectedListing.property,
+              status: data.propertyData?.status || selectedListing.property?.status,
+              owner: {
+                ...selectedListing.property?.owner,
+                notes: data.ownerData?.notes || selectedListing.property?.owner?.notes,
+              },
+            },
+          };
+          setSelectedListing(updatedListing);
+        }
+      }
+      return result;
+    },
+    [handleEdit, selectedListing, listings],
+  );
+
+  const handleUpdateListing = useCallback((updatedListing) => {
+    setSelectedListing(updatedListing);
+  }, []);
 
   // --- Loading / Error ---
   if (loading && memoizedListings.length === 0) {
@@ -184,7 +238,6 @@ export default function ListingsAction() {
   }
 
   // Render
-  // ============================================
   return (
     <>
       <div className="flex flex-col lg:flex-row gap-6">
@@ -276,7 +329,7 @@ export default function ListingsAction() {
               <ListingTable
                 listings={memoizedListings}
                 onViewDetails={handleViewDetails}
-                onEdit={handleEdit}
+                onEdit={handleEditClick}
                 onDelete={openDeleteModal}
                 onStatusChange={openStatusChangeModal}
                 onCall={handleCall}
@@ -303,11 +356,21 @@ export default function ListingsAction() {
         />
       </Drawer>
 
-      {/* Detail Modal */}
-      <ListingDetailModal
-        isOpen={isDetailModalOpen}
-        onClose={handleCloseDetailModal}
+      {/* Detail Modal - Show  */}
+      <ListingDetailModal.Show
+        isOpen={isShowModalOpen}
+        onClose={handleCloseShowModal}
         listing={selectedListing}
+      />
+
+      {/* Detail Modal - Edit */}
+      <ListingDetailModal.Edit
+        key={selectedListing?.id || "edit-modal"}
+        isOpen={isEditModalOpen}
+        onClose={handleCloseEditModal}
+        listing={selectedListing}
+        onSave={handleEditWrapper}
+        onUpdate={handleUpdateListing}
       />
 
       {/* Modal Manager (Delete + Status Change) */}

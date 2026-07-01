@@ -65,4 +65,14 @@ export const listingApi = {
   bulkDelete: (ids) => api.delete("/listings/bulk_delete/", { data: { ids } }),
 };
 
+// update and edit property
+export const propertyApi = {
+  update: (id, data) => api.patch(`/properties/${id}/`, data),
+};
+
+// update and edit owner info
+export const ownerApi = {
+  update: (id, data) => api.patch(`/owners/${id}/`, data),
+};
+
 export default api;

@@ -1,9 +1,11 @@
 import React from "react";
 import Table from "../common/Table/Table";
-import Dropdown from "../common/Dropdown";
+import Dropdown from "../common/dropdown/Dropdown";
 import Checkbox from "../common/Checkbox";
 import StatusBadge from "../common/StatusBadge";
 import ScoreBadge from "../common/ScoreBadge";
+import ActionMenu from "../common/ActionMenu";
+import StatusDropdown from "../common/dropdown/StatusDropdown";
 import {
   Eye,
   Edit,
@@ -15,68 +17,15 @@ import {
   User,
 } from "lucide-react";
 
-import { getRelativeTime, formatDate, formatPrice } from "../../helpers/dateHelpers";
-import { getPropertyInfo } from "../../helpers/listingHelpers";
+import {
+  getRelativeTime,
+  formatDate,
+  formatTime,
+} from "../../helpers/dateHelpers";
+import { getPropertyInfo , formatPrice} from "../../helpers/listingHelpers";
 import { LISTING_COLUMNS } from "../../constants/tableColumns";
 
-// ============================================
-// Status Dropdown
-// ============================================
-const StatusDropdown = ({ listing, onStatusChange }) => {
-  const statusOptions = [
-    { value: "reviewed", label: "بررسی شده" },
-    { value: "contacted", label: "تماس گرفته شده" },
-    { value: "converted", label: "تبدیل شده" },
-    { value: "rejected", label: "رد شده" },
-  ];
-
-  const items = statusOptions.map((opt) => ({
-    label: opt.label,
-    active: listing.status === opt.value,
-    onClick: () => onStatusChange?.(listing, opt.value),
-    color: listing.status === opt.value ? "bg-blue-50 text-blue-600" : "text-gray-700",
-  }));
-
-  return (
-    <Dropdown
-      trigger={
-        <button className="text-gray-400 cursor-pointer hover:text-gray-600 p-0.5 rounded hover:bg-gray-100">
-          <RefreshCw size={12} />
-        </button>
-      }
-      items={items}
-      position="right"
-    />
-  );
-};
-
-// ============================================
-// Action Menu
-// ============================================
-const ActionMenu = ({ listing, onViewDetails, onEdit, onDelete, onCall }) => {
-  const items = [
-    { icon: Eye, label: "جزئیات", onClick: () => onViewDetails?.(listing), color: "text-blue-600" },
-    { icon: Edit, label: "ویرایش", onClick: () => onEdit?.(listing), color: "text-green-600" },
-    { icon: Phone, label: "تماس", onClick: () => onCall?.(listing), color: "text-purple-600" },
-    { icon: Trash2, label: "حذف", onClick: () => onDelete?.(listing), color: "text-red-600" },
-  ];
-
-  return (
-    <Dropdown
-      trigger={
-        <button className="text-gray-400 cursor-pointer hover:text-gray-600 p-1 rounded hover:bg-gray-100">
-          <MoreHorizontal size={16} />
-        </button>
-      }
-      items={items}
-      position="left"
-    />
-  );
-};
-
-// ============================================
 // Listing Row
-// ============================================
 const ListingRow = ({
   item,
   index,
@@ -138,35 +87,47 @@ const ListingRow = ({
       <Table.Cell width="180px">
         <div className="flex items-center gap-1.5">
           <StatusBadge status={item.status} />
-          <StatusDropdown listing={item} onStatusChange={onStatusChange} />
+          <StatusDropdown
+            type="listing"
+            currentStatus={item.status}
+            onStatusChange={(newStatus) => onStatusChange?.(item, newStatus)}
+          />
         </div>
       </Table.Cell>
 
-      <Table.Cell width="140px">
+      <Table.Cell
+        width="140px"
+        className="min-w-25 hidden sm:table-cell"
+        style={{ minWidth: "100px" }}
+      >
         <div className="text-xs text-gray-500">
           {getRelativeTime(item.created_at)}
           <div className="text-[9px] text-gray-400 mt-0.5">
             {formatDate(item.created_at)}
           </div>
+          <div className="text-[9px] text-gray-400">
+            {formatTime(item.created_at)}
+          </div>
         </div>
       </Table.Cell>
 
-      <Table.Cell align="center" width="40px" className="relative">
+      <Table.Cell
+        align="center"
+        width="40px"
+        className="relative overflow-visible"
+      >
         <ActionMenu
-          listing={item}
-          onViewDetails={onViewDetails}
-          onEdit={onEdit}
-          onDelete={onDelete}
-          onCall={onCall}
+          onViewDetails={() => onViewDetails?.(item)}
+          onEdit={() => onEdit?.(item)}
+          onDelete={() => onDelete?.(item)}
+          onCall={() => onCall?.(item)}
         />
       </Table.Cell>
     </Table.Row>
   );
 };
 
-// ============================================
 // Main ListingTable
-// ============================================
 const ListingTable = ({
   listings,
   onViewDetails,
@@ -192,7 +153,15 @@ const ListingTable = ({
     <Table>
       <Table.Header>
         {LISTING_COLUMNS.map((col) => (
-          <Table.Column key={col.key} align={col.align || "right"} width={col.width}>
+          <Table.Column
+            key={col.key}
+            align={col.align || "right"}
+            width={col.width}
+            className={`${
+              col.hideOnMobile ? "hidden sm:table-cell" : ""
+            } whitespace-nowrap`}
+            style={{ minWidth: col.minWidth }}
+          >
             {col.key === "checkbox" ? (
               <Checkbox checked={isAllSelected} onChange={onSelectAll} />
             ) : (

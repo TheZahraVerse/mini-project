@@ -1,6 +1,6 @@
 import React from "react";
 import ConfirmModal from "./ConfirmModal";
-import { getModalConfig } from "../../constants/modalConfigs";
+import { getModalConfig } from "../../../constants/modalConfigs";
 
 const ModalManager = ({ modal, onClose, onConfirm }) => {
   const { isOpen, type, data } = modal;

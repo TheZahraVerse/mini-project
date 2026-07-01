@@ -12,9 +12,9 @@ import CardView from "../components/common/CardView";
 import ListingDetailModal from "../components/listings/ListingDetailModal";
 import Drawer from "../components/common/Drawer";
 import Button from "../components/common/Button";
-import SortDropdown from "../components/common/SortDropdown";
+import SortDropdown from "../components/common/dropdown/SortDropdown";
 import FilterSidebar from "../components/filters/FilterSidebar";
-import StatsDropdown from "../components/common/StatsDropdown";
+import StatsDropdown from "../components/common/dropdown/StatsDropdown";
 import EmptyState from "../components/common/EmptyState";
 
 // Hooks
@@ -212,7 +212,7 @@ export default function ListingsShow() {
       </Drawer>
 
       {/* Detail Modal */}
-      <ListingDetailModal
+      <ListingDetailModal.Show
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         listing={selectedListing}
